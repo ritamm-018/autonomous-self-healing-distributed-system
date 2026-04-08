@@ -1,0 +1,12 @@
+server:
+  port: 8085 # LOGGING SERVICE LISTENS HERE
+
+spring:
+  application:
+    name: logging-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

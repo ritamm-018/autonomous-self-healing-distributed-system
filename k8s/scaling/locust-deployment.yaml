@@ -1,0 +1,133 @@
+---
+# Locust Master Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-master
+  namespace: self-healing-prod
+  labels:
+    app: locust
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locust
+      role: master
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: master
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:2.20.0
+        args:
+        - --master
+        - --host=http://gateway-service
+        - --locustfile=/mnt/locust/locust-load-test.py
+        - --web-port=8089
+        ports:
+        - name: web
+          containerPort: 8089
+        - name: master-p1
+          containerPort: 5557
+        - name: master-p2
+          containerPort: 5558
+        volumeMounts:
+        - name: locust-scripts
+          mountPath: /mnt/locust
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+      volumes:
+      - name: locust-scripts
+        configMap:
+          name: locust-scripts
+
+---
+# Locust Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-worker
+  namespace: self-healing-prod
+  labels:
+    app: locust
+    role: worker
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: locust
+      role: worker
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: worker
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:2.20.0
+        args:
+        - --worker
+        - --master-host=locust-master
+        - --locustfile=/mnt/locust/locust-load-test.py
+        volumeMounts:
+        - name: locust-scripts
+          mountPath: /mnt/locust
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+      volumes:
+      - name: locust-scripts
+        configMap:
+          name: locust-scripts
+
+---
+# Locust Master Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust-master
+  namespace: self-healing-prod
+  labels:
+    app: locust
+    role: master
+spec:
+  type: ClusterIP
+  ports:
+  - name: web
+    port: 8089
+    targetPort: 8089
+  - name: master-p1
+    port: 5557
+    targetPort: 5557
+  - name: master-p2
+    port: 5558
+    targetPort: 5558
+  selector:
+    app: locust
+    role: master
+
+---
+# Locust Scripts ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: locust-scripts
+  namespace: self-healing-prod
+data:
+  locust-load-test.py: |
+    # Content will be mounted from the actual file
+    # Use: kubectl create configmap locust-scripts --from-file=locust-load-test.py

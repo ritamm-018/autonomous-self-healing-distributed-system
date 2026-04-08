@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recovery Manager - Autonomous Self-Healing System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        .page-content {
+            padding-top: 100px;
+            min-height: 100vh;
+            background: var(--gradient-dark);
+        }
+
+        .recovery-dashboard {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .recovery-control {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .recovery-button {
+            background: #ffffff;
+            color: #059669;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .recovery-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .recovery-log {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+
+        .log-entry {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid transparent;
+            padding-left: 1rem;
+        }
+
+        .log-entry.success {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .log-entry.error {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .log-entry.info {
+            border-color: var(--light-blue);
+            color: var(--light-blue);
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.5rem;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-green);
+        }
+
+        .timeline-time {
+            font-size: 0.85rem;
+            opacity: 0.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-content {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"></div>
+            <span>Self-Healing System</span>
+        </a>
+        <ul class="navbar-menu">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="health-monitor.html">Health Monitor</a></li>
+            <li><a href="recovery-manager.html">Recovery Manager</a></li>
+            <li><a href="alerts.html">Alerts</a></li>
+            <li><a href="dashboard.html">Live Dashboard</a></li>
+        </ul>
+        <a href="dashboard.html" class="btn-primary">Get Started</a>
+    </nav>
+
+    <div class="page-content">
+        <div class="container">
+            <!-- Header -->
+            <div class="section-header" style="margin-bottom: 2rem;">
+                <h1 style="font-size: 3rem; margin-bottom: 0.5rem;"> RECOVERY MANAGER</h1>
+                <p style="font-size: 1.2rem;">Your Automated System Healer</p>
+                <p style="opacity: 0.7;">Crush downtime. Repair failed services automatically.<br>Your 24/7 auto-healing
+                    solution restores your microservices instantly.</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value" style="color: var(--accent-orange);">4</div>
+                    <div class="label">Critical Incidents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value" style="color: var(--light-blue);">12s</div>
+                    <div class="label">Average Recovery Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value" style="color: var(--accent-green);">99%</div>
+                    <div class="label">Success Rate</div>
+                </div>
+            </div>
+
+            <!-- Recovery Control -->
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>AUTOMATED SERVICE RECOVERY</h2>
+                <p>Instantly Detect, Diagnose, and Restart Failed Containers</p>
+            </div>
+
+            <div class="recovery-control">
+                <h3 style="margin-bottom: 1rem; font-size: 1.5rem;">Recovery Actions</h3>
+                <p style="margin-bottom: 1.5rem; opacity: 0.9;">Trigger manual recovery or view automated recovery logs
+                </p>
+                <button class="recovery-button" onclick="window.location.href='dashboard.html'">
+                     View Live Recovery Dashboard
+                </button>
+            </div>
+
+            <!-- Recovery Process -->
+            <div class="recovery-dashboard">
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Recovery Process Flow</h3>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-time">Step 1</div>
+                        <div class="timeline-content">
+                            <h4 style="margin-bottom: 0.5rem;"> Problem Identified</h4>
+                            <p style="opacity: 0.8;">Health Monitor detects service failure and sends alert to Recovery
+                                Manager</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">Step 2</div>
+                        <div class="timeline-content">
+                            <h4 style="margin-bottom: 0.5rem;"> Instant Response</h4>
+                            <p style="opacity: 0.8;">Recovery Manager receives notification and initiates recovery
+                                protocol</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">Step 3</div>
+                        <div class="timeline-content">
+                            <h4 style="margin-bottom: 0.5rem;"> Service Restarted</h4>
+                            <p style="opacity: 0.8;">Docker container is restarted using Docker Socket integration</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">Step 4</div>
+                        <div class="timeline-content">
+                            <h4 style="margin-bottom: 0.5rem;"> Health Verified</h4>
+                            <p style="opacity: 0.8;">System confirms service is back online and functioning normally</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recovery Logs -->
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>RECENT RECOVERY ACTIONS</h2>
+            </div>
+            <div class="recovery-log" id="recovery-logs">
+                <div class="log-entry success">[2026-02-11 09:15:32] ✓ Successfully restarted data-service container
+                </div>
+                <div class="log-entry info">[2026-02-11 09:15:28] → Executing docker restart data-service</div>
+                <div class="log-entry error">[2026-02-11 09:15:25] ✗ CRITICAL: data-service health check failed</div>
+                <div class="log-entry success">[2026-02-11 08:42:18] ✓ Successfully restarted auth-service container
+                </div>
+                <div class="log-entry info">[2026-02-11 08:42:15] → Executing docker restart auth-service</div>
+                <div class="log-entry error">[2026-02-11 08:42:12] ✗ CRITICAL: auth-service health check failed</div>
+                <div class="log-entry success">[2026-02-11 07:23:45] ✓ All services healthy - No action required</div>
+            </div>
+
+            <!-- Features -->
+            <div class="section-header" style="margin-top: 4rem;">
+                <h2>KEY CAPABILITIES</h2>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        
+                    </div>
+                    <h3>Automatic Repairs</h3>
+                    <p>Instantly restarts crashed containers using Docker Socket integration for zero-touch recovery.
+                    </p>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        
+                    </div>
+                    <h3>Root Cause Analysis</h3>
+                    <p>Diagnoses the failure root cause to execute targeted and effective recovery steps.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        
+                    </div>
+                    <h3>Detailed Recovery Logs</h3>
+                    <p>Creates a full log of recovery actions for auditing and troubleshooting purposes.</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 3rem; padding: 2rem;">
+                <h3 style="font-size: 1.8rem; margin-bottom: 1rem;">Make Downtime a Thing of the Past with Automated
+                    Recovery</h3>
+                <a href="dashboard.html" class="btn-primary">Launch Live Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 Autonomous Self-Healing System. Built with Spring Boot, Docker & Resilience.</p>
+    </footer>
+</body>
+
+</html>

@@ -1,0 +1,402 @@
+---
+# Elasticsearch StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: self-healing-monitoring
+  labels:
+    app: elasticsearch
+spec:
+  serviceName: elasticsearch
+  replicas: 3
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      initContainers:
+      - name: increase-vm-max-map
+        image: busybox
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
+      - name: increase-fd-ulimit
+        image: busybox
+        command: ["sh", "-c", "ulimit -n 65536"]
+        securityContext:
+          privileged: true
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+        ports:
+        - name: http
+          containerPort: 9200
+        - name: transport
+          containerPort: 9300
+        env:
+        - name: cluster.name
+          value: "self-healing-logs"
+        - name: node.name
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: discovery.seed_hosts
+          value: "elasticsearch-0.elasticsearch,elasticsearch-1.elasticsearch,elasticsearch-2.elasticsearch"
+        - name: cluster.initial_master_nodes
+          value: "elasticsearch-0,elasticsearch-1,elasticsearch-2"
+        - name: ES_JAVA_OPTS
+          value: "-Xms2g -Xmx2g"
+        - name: xpack.security.enabled
+          value: "false"
+        - name: xpack.monitoring.collection.enabled
+          value: "true"
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 4Gi
+          limits:
+            cpu: 2000m
+            memory: 8Gi
+        volumeMounts:
+        - name: data
+          mountPath: /usr/share/elasticsearch/data
+        livenessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: 9200
+          initialDelaySeconds: 90
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health?wait_for_status=yellow
+            port: 9200
+          initialDelaySeconds: 60
+          periodSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 100Gi
+
+---
+# Elasticsearch Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: self-healing-monitoring
+  labels:
+    app: elasticsearch
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 9200
+    name: http
+  - port: 9300
+    name: transport
+  selector:
+    app: elasticsearch
+
+---
+# Elasticsearch Client Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-client
+  namespace: self-healing-monitoring
+  labels:
+    app: elasticsearch
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9200
+    name: http
+  selector:
+    app: elasticsearch
+
+---
+# Logstash Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash
+  namespace: self-healing-monitoring
+  labels:
+    app: logstash
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+      - name: logstash
+        image: docker.elastic.co/logstash/logstash:8.11.3
+        ports:
+        - name: beats
+          containerPort: 5044
+        - name: http
+          containerPort: 9600
+        env:
+        - name: LS_JAVA_OPTS
+          value: "-Xmx1g -Xms1g"
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/logstash/pipeline
+        - name: logstash-config
+          mountPath: /usr/share/logstash/config/logstash.yml
+          subPath: logstash.yml
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9600
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9600
+          initialDelaySeconds: 30
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: logstash-pipeline
+      - name: logstash-config
+        configMap:
+          name: logstash-config
+
+---
+# Logstash Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: logstash
+  namespace: self-healing-monitoring
+  labels:
+    app: logstash
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5044
+    name: beats
+  - port: 9600
+    name: http
+  selector:
+    app: logstash
+
+---
+# Logstash Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: self-healing-monitoring
+data:
+  logstash.yml: |
+    http.host: "0.0.0.0"
+    path.config: /usr/share/logstash/pipeline
+
+---
+# Logstash Pipeline
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-pipeline
+  namespace: self-healing-monitoring
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+      
+      # Also accept direct JSON logs
+      tcp {
+        port => 5000
+        codec => json
+      }
+    }
+    
+    filter {
+      # Parse JSON logs
+      if [message] =~ /^\{.*\}$/ {
+        json {
+          source => "message"
+        }
+      }
+      
+      # Extract Kubernetes metadata
+      if [kubernetes] {
+        mutate {
+          add_field => {
+            "service" => "%{[kubernetes][labels][app]}"
+            "namespace" => "%{[kubernetes][namespace]}"
+            "pod" => "%{[kubernetes][pod][name]}"
+          }
+        }
+      }
+      
+      # Parse log level
+      if [level] {
+        mutate {
+          uppercase => ["level"]
+        }
+      }
+      
+      # Parse Java stack traces
+      if [level] == "ERROR" {
+        multiline {
+          pattern => "^\s"
+          what => "previous"
+        }
+      }
+      
+      # Extract trace context (OpenTelemetry format)
+      grok {
+        match => {
+          "message" => "\[trace_id=%{DATA:trace_id}\] \[span_id=%{DATA:span_id}\]"
+        }
+      }
+      
+      # Parse timestamp
+      if [timestamp] {
+        date {
+          match => ["timestamp", "ISO8601", "yyyy-MM-dd HH:mm:ss.SSS"]
+          target => "@timestamp"
+        }
+      }
+      
+      # Add tags based on log level
+      if [level] == "ERROR" {
+        mutate {
+          add_tag => ["error"]
+        }
+      } else if [level] == "WARN" {
+        mutate {
+          add_tag => ["warning"]
+        }
+      }
+      
+      # Extract HTTP status codes
+      grok {
+        match => {
+          "message" => "status=%{NUMBER:status_code:int}"
+        }
+      }
+      
+      # Extract duration
+      grok {
+        match => {
+          "message" => "duration=%{NUMBER:duration_ms:float}ms"
+        }
+      }
+      
+      # Remove unnecessary fields
+      mutate {
+        remove_field => ["agent", "ecs", "host", "input"]
+      }
+    }
+    
+    output {
+      elasticsearch {
+        hosts => ["elasticsearch-client:9200"]
+        index => "logs-%{service}-%{+YYYY.MM.dd}"
+        template_name => "logs"
+      }
+      
+      # Debug output (comment out in production)
+      # stdout {
+      #   codec => rubydebug
+      # }
+    }
+
+---
+# Kibana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: self-healing-monitoring
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:8.11.3
+        ports:
+        - name: http
+          containerPort: 5601
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://elasticsearch-client:9200"
+        - name: SERVER_NAME
+          value: "kibana"
+        - name: SERVER_HOST
+          value: "0.0.0.0"
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 120
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 60
+          periodSeconds: 5
+
+---
+# Kibana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: self-healing-monitoring
+  labels:
+    app: kibana
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5601
+    targetPort: 5601
+    name: http
+  selector:
+    app: kibana

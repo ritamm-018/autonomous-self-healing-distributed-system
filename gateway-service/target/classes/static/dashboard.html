@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Dashboard - Autonomous Self-Healing System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            height: 100vh;
+            padding-top: 70px;
+            background: var(--gradient-dark);
+        }
+
+        .visualization-panel {
+            position: relative;
+            background: radial-gradient(circle at center, #0a1628 0%, #050b14 100%);
+            overflow: hidden;
+        }
+
+        .tech-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.5;
+        }
+
+        .nodes-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .node {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(10, 22, 40, 0.9);
+            border: 3px solid var(--light-blue);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.5s;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+        }
+
+        .node:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 50px rgba(59, 130, 246, 0.5);
+        }
+
+        .node-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .node.healthy {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+        }
+
+        .node.dead {
+            border-color: var(--accent-red);
+            box-shadow: 0 0 50px rgba(239, 68, 68, 0.5);
+            animation: shake 0.5s infinite, pulse-red 2s infinite;
+        }
+
+        .node.healing {
+            border-color: var(--accent-green);
+            animation: pulse-green 1.5s infinite;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            25% {
+                transform: translate(-5px, 5px) rotate(-5deg);
+            }
+
+            75% {
+                transform: translate(5px, -5px) rotate(5deg);
+            }
+        }
+
+        @keyframes pulse-red {
+
+            0%,
+            100% {
+                box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 60px rgba(239, 68, 68, 0.8);
+            }
+        }
+
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 60px rgba(16, 185, 129, 0.8);
+            }
+        }
+
+        /* Node Positions */
+        #node-gateway {
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #node-auth {
+            top: 40%;
+            left: 25%;
+            transform: translate(-50%, -50%);
+        }
+
+        #node-data {
+            top: 40%;
+            left: 75%;
+            transform: translate(-50%, -50%);
+        }
+
+        #node-monitor {
+            bottom: 25%;
+            left: 35%;
+            transform: translate(-50%, 50%);
+        }
+
+        #node-recovery {
+            bottom: 25%;
+            left: 65%;
+            transform: translate(-50%, 50%);
+        }
+
+        .info-panel {
+            background: rgba(10, 22, 40, 0.95);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-section {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-section h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            color: var(--accent-green);
+        }
+
+        .demo-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .demo-button {
+            background: linear-gradient(135deg, var(--accent-red) 0%, #dc2626 100%);
+            color: #fff;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .demo-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
+        }
+
+        .healing-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            opacity: 0.4;
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            opacity: 1;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .step.active .step-number {
+            background: var(--accent-green);
+            color: #000;
+        }
+
+        .console {
+            flex: 1;
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .console h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            color: var(--accent-green);
+            font-family: var(--font-primary);
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            padding-left: 1rem;
+            border-left: 2px solid transparent;
+        }
+
+        .log-entry.info {
+            border-color: var(--light-blue);
+            color: var(--light-blue);
+        }
+
+        .log-entry.success {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .log-entry.error {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .log-entry.warning {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"></div>
+            <span>Self-Healing System</span>
+        </a>
+        <ul class="navbar-menu">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="health-monitor.html">Health Monitor</a></li>
+            <li><a href="recovery-manager.html">Recovery Manager</a></li>
+            <li><a href="alerts.html">Alerts</a></li>
+            <li><a href="dashboard.html">Live Dashboard</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Visualization Panel -->
+        <div class="visualization-panel">
+            <div class="tech-grid"></div>
+            <div class="nodes-container">
+                <!-- Service Nodes -->
+                <div class="node healthy" id="node-gateway">
+                    <div class="node-icon"></div>
+                    <div>Gateway</div>
+                    <div style="font-size: 0.75rem; opacity: 0.7;">:8080</div>
+                </div>
+
+                <div class="node healthy" id="node-auth">
+                    <div class="node-icon"></div>
+                    <div>Auth</div>
+                    <div style="font-size: 0.75rem; opacity: 0.7;">:8081</div>
+                </div>
+
+                <div class="node healthy" id="node-data">
+                    <div class="node-icon"></div>
+                    <div>Data</div>
+                    <div style="font-size: 0.75rem; opacity: 0.7;">:8082</div>
+                </div>
+
+                <div class="node healthy" id="node-monitor">
+                    <div class="node-icon"></div>
+                    <div>Monitor</div>
+                    <div style="font-size: 0.75rem; opacity: 0.7;">:8083</div>
+                </div>
+
+                <div class="node healthy" id="node-recovery">
+                    <div class="node-icon"></div>
+                    <div>Recovery</div>
+                    <div style="font-size: 0.75rem; opacity: 0.7;">:8084</div>
+                </div>
+
+                <!-- Connection Lines (SVG) -->
+                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                    <line x1="50%" y1="15%" x2="25%" y2="40%" stroke="rgba(59, 130, 246, 0.3)" stroke-width="2" />
+                    <line x1="50%" y1="15%" x2="75%" y2="40%" stroke="rgba(59, 130, 246, 0.3)" stroke-width="2" />
+                    <line x1="35%" y1="75%" x2="25%" y2="40%" stroke="rgba(16, 185, 129, 0.3)" stroke-width="2"
+                        stroke-dasharray="5,5" />
+                    <line x1="35%" y1="75%" x2="75%" y2="40%" stroke="rgba(16, 185, 129, 0.3)" stroke-width="2"
+                        stroke-dasharray="5,5" />
+                    <line x1="65%" y1="75%" x2="75%" y2="40%" stroke="rgba(16, 185, 129, 0.3)" stroke-width="2"
+                        stroke-dasharray="5,5" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="info-panel">
+            <!-- Demo Controls -->
+            <div class="panel-section">
+                <h3> CHAOS ENGINEERING</h3>
+                <div class="demo-controls">
+                    <button class="demo-button" onclick="killDataService()">
+                         KILL DATA SERVICE
+                    </button>
+                    <p style="font-size: 0.85rem; opacity: 0.7; margin: 0;">
+                        Simulate a service crash and watch the system heal itself automatically
+                    </p>
+                </div>
+            </div>
+
+            <!-- Healing Process -->
+            <div class="panel-section">
+                <h3> HEALING LIFECYCLE</h3>
+                <div class="healing-steps">
+                    <div class="step active" id="step-1">
+                        <div class="step-number">1</div>
+                        <div>System Normal</div>
+                    </div>
+                    <div class="step" id="step-2">
+                        <div class="step-number">2</div>
+                        <div>Failure Detected</div>
+                    </div>
+                    <div class="step" id="step-3">
+                        <div class="step-number">3</div>
+                        <div>Recovery Initiated</div>
+                    </div>
+                    <div class="step" id="step-4">
+                        <div class="step-number">4</div>
+                        <div>System Restored</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Console Logs -->
+            <div class="console">
+                <h3>&gt; SYSTEM LOGS</h3>
+                <div id="logs-content">
+                    <div class="log-entry info">&gt; System initialized successfully</div>
+                    <div class="log-entry success">&gt; All services healthy</div>
+                    <div class="log-entry info">&gt; Monitoring active - checking every 5 seconds</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logs = document.getElementById('logs-content');
+
+        // Log function
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `> ${message}`;
+            logs.appendChild(entry);
+            logs.parentElement.scrollTop = logs.parentElement.scrollHeight;
+        }
+
+        // Set active step
+        function setStep(stepNum) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${stepNum}`).classList.add('active');
+        }
+
+        // Set node state
+        function setNodeState(nodeId, state) {
+            const node = document.getElementById(nodeId);
+            node.className = 'node';
+            if (state === 'healthy') node.classList.add('healthy');
+            if (state === 'dead') node.classList.add('dead');
+            if (state === 'healing') node.classList.add('healing');
+        }
+
+        // Kill Data Service Demo
+        function killDataService() {
+            log(' INITIATING KILL SEQUENCE...', 'warning');
+
+            setTimeout(() => {
+                log(' Sending kill command to data-service...', 'error');
+                fetch('/data/kill')
+                    .then(() => {
+                        log('✗ DATA SERVICE CRASHED!', 'error');
+                        setNodeState('node-data', 'dead');
+                        setStep(2);
+
+                        // Simulate health monitor detection
+                        setTimeout(() => {
+                            log(' Health Monitor detected failure', 'warning');
+                            log(' Calling Recovery Manager...', 'info');
+                            setStep(3);
+                            setNodeState('node-recovery', 'healing');
+
+                            // Simulate recovery
+                            setTimeout(() => {
+                                log(' Executing: docker restart data-service', 'info');
+
+                                setTimeout(() => {
+                                    log('✓ Container restarted successfully', 'success');
+                                    log('✓ Service health check passed', 'success');
+                                    setNodeState('node-data', 'healthy');
+                                    setNodeState('node-recovery', 'healthy');
+                                    setStep(4);
+
+                                    setTimeout(() => {
+                                        log('✓ System fully restored - All services healthy', 'success');
+                                        setStep(1);
+                                    }, 3000);
+                                }, 3000);
+                            }, 2000);
+                        }, 2000);
+                    })
+                    .catch(() => {
+                        log('Note: Backend integration pending - Demo mode active', 'info');
+                        // Run demo animation anyway
+                        setNodeState('node-data', 'dead');
+                        setStep(2);
+
+                        setTimeout(() => {
+                            log(' Health Monitor detected failure', 'warning');
+                            log(' Calling Recovery Manager...', 'info');
+                            setStep(3);
+                            setNodeState('node-recovery', 'healing');
+
+                            setTimeout(() => {
+                                log(' Executing: docker restart data-service', 'info');
+
+                                setTimeout(() => {
+                                    log('✓ Container restarted successfully', 'success');
+                                    log('✓ Service health check passed', 'success');
+                                    setNodeState('node-data', 'healthy');
+                                    setNodeState('node-recovery', 'healthy');
+                                    setStep(4);
+
+                                    setTimeout(() => {
+                                        log('✓ System fully restored - All services healthy', 'success');
+                                        setStep(1);
+                                    }, 3000);
+                                }, 3000);
+                            }, 2000);
+                        }, 2000);
+                    });
+            }, 500);
+        }
+
+        // Heartbeat simulation
+        setInterval(() => {
+            const services = ['gateway', 'auth', 'data', 'monitor', 'recovery'];
+            services.forEach(service => {
+                const node = document.getElementById(`node-${service}`);
+                if (node.classList.contains('healthy')) {
+                    node.style.transform = node.style.transform || '';
+                    node.style.transform += ' scale(1.05)';
+                    setTimeout(() => {
+                        node.style.transform = node.style.transform.replace(' scale(1.05)', '');
+                    }, 200);
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+
+</html>

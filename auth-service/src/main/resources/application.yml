@@ -1,0 +1,13 @@
+server:
+  port: 8081 # AUTH SERVICE LISTENS HERE
+
+spring:
+  application:
+    name: auth-service
+
+# Ensure health check is available
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

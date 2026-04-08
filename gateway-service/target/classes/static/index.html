@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Self-Healing System - Zero Downtime Infrastructure</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"></div>
+            <span>Self-Healing System</span>
+        </a>
+        <ul class="navbar-menu">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="health-monitor.html">Health Monitor</a></li>
+            <li><a href="recovery-manager.html">Recovery Manager</a></li>
+            <li><a href="alerts.html">Alerts</a></li>
+            <li><a href="dashboard.html">Live Dashboard</a></li>
+            <li><a href="login.html">Login</a></li>
+        </ul>
+        <a href="login.html" class="btn-primary">Get Started</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="tech-grid"></div>
+        <div class="hero-content">
+            <div class="hero-text fade-in-up">
+                <h1>AUTONOMOUS<br>SELF-HEALING SYSTEM</h1>
+                <p class="subtitle">Detect. Heal. Automate.</p>
+                <p class="description">
+                    Ensure 24/7 Uptime for Your Business. Our intelligent system automatically detects failures,
+                    diagnoses issues, and restores services in seconds—without human intervention.
+                </p>
+                <div class="hero-buttons">
+                    <a href="dashboard.html" class="btn-primary">Launch Dashboard</a>
+                    <a href="#how-it-works" class="btn-secondary">Learn More</a>
+                </div>
+            </div>
+            <div class="hero-image fade-in-up">
+                <svg width="500" height="400" viewBox="0 0 500 400"
+                    style="filter: drop-shadow(0 20px 60px rgba(16, 185, 129, 0.3));">
+                    <!-- Server Illustration -->
+                    <defs>
+                        <linearGradient id="serverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#1a4d7a;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#2563a8;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Servers -->
+                    <rect x="50" y="150" width="120" height="180" rx="10" fill="url(#serverGrad)" opacity="0.9" />
+                    <rect x="60" y="170" width="100" height="20" rx="3" fill="#10b981" opacity="0.8" />
+                    <rect x="60" y="200" width="100" height="20" rx="3" fill="#10b981" opacity="0.6" />
+                    <rect x="60" y="230" width="100" height="20" rx="3" fill="#3b82f6" opacity="0.8" />
+
+                    <rect x="190" y="100" width="120" height="180" rx="10" fill="url(#serverGrad)" opacity="0.9" />
+                    <rect x="200" y="120" width="100" height="20" rx="3" fill="#10b981" opacity="0.8" />
+                    <rect x="200" y="150" width="100" height="20" rx="3" fill="#10b981" opacity="0.8" />
+                    <rect x="200" y="180" width="100" height="20" rx="3" fill="#10b981" opacity="0.6" />
+
+                    <rect x="330" y="150" width="120" height="180" rx="10" fill="url(#serverGrad)" opacity="0.9" />
+                    <rect x="340" y="170" width="100" height="20" rx="3" fill="#ef4444" opacity="0.8" />
+                    <rect x="340" y="200" width="100" height="20" rx="3" fill="#10b981" opacity="0.6" />
+                    <rect x="340" y="230" width="100" height="20" rx="3" fill="#10b981" opacity="0.6" />
+
+                    <!-- Shield -->
+                    <path d="M 250 20 L 280 35 L 280 70 Q 280 90 250 100 Q 220 90 220 70 L 220 35 Z"
+                        fill="url(#shieldGrad)" opacity="0.9" />
+                    <text x="250" y="70" text-anchor="middle" fill="white" font-size="30" font-weight="bold">✓</text>
+
+                    <!-- Healing indicator -->
+                    <rect x="320" y="120" width="140" height="40" rx="8" fill="#10b981" opacity="0.9" />
+                    <text x="390" y="145" text-anchor="middle" fill="white" font-size="14"
+                        font-weight="bold">HEALING...</text>
+
+                    <!-- Connection lines -->
+                    <line x1="170" y1="240" x2="190" y2="190" stroke="#3b82f6" stroke-width="2" opacity="0.5" />
+                    <line x1="310" y1="190" x2="330" y2="240" stroke="#3b82f6" stroke-width="2" opacity="0.5" />
+                    <line x1="250" y1="100" x2="250" y2="150" stroke="#10b981" stroke-width="3" opacity="0.7" />
+
+                    <!-- Pulse animation -->
+                    <circle cx="250" cy="60" r="50" fill="none" stroke="#10b981" stroke-width="2" opacity="0.3">
+                        <animate attributeName="r" from="50" to="80" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" from="0.3" to="0" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="section section-light" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>HOW IT WORKS</h2>
+                <p>Intelligent Auto-Recovery for Distributed Services</p>
+            </div>
+            <div class="cards-grid">
+                <div class="card card-light">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        
+                    </div>
+                    <h3>Health Monitor</h3>
+                    <p>Continuously scans service health every 5 seconds, detecting failures in real-time before they
+                        impact users.</p>
+                </div>
+                <div class="card card-light">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        
+                    </div>
+                    <h3>Recovery Manager</h3>
+                    <p>Automatically restarts failed services using Docker integration, restoring system health in
+                        seconds.</p>
+                </div>
+                <div class="card card-light">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                        
+                    </div>
+                    <h3>Instant Alerts</h3>
+                    <p>Notifies your team instantly via multiple channels when critical issues are detected and
+                        resolved.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Zero Downtime Section -->
+    <section class="section section-dark">
+        <div class="container">
+            <div class="section-header">
+                <h2>ZERO DOWNTIME FOR YOUR SERVICES</h2>
+                <p>Keep Your Services Running Smoothly, 24/7</p>
+            </div>
+            <div class="process-grid">
+                <div class="process-step">
+                    <div class="process-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                        
+                    </div>
+                    <h4>CRASH DETECTED</h4>
+                    <p>Detects failures in seconds</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        
+                    </div>
+                    <h4>AUTO HEALING</h4>
+                    <p>Self-heals & restores services</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        
+                    </div>
+                    <h4>ALERT SENT</h4>
+                    <p>Sends real-time notifications</p>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value">&lt;10s</div>
+                    <div class="label">Average Recovery Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value">99.9%</div>
+                    <div class="label">Success Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value">24/7</div>
+                    <div class="label">Automated Monitoring</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section class="section section-light">
+        <div class="container">
+            <div class="section-header">
+                <h2>MICROSERVICES ARCHITECTURE</h2>
+                <p>7 Dockerized Services Working in Harmony</p>
+            </div>
+            <div class="cards-grid">
+                <div class="card card-light">
+                    <h3> Gateway Service</h3>
+                    <p>Entry point routing traffic to internal services</p>
+                </div>
+                <div class="card card-light">
+                    <h3> Auth Service</h3>
+                    <p>Authentication and token generation</p>
+                </div>
+                <div class="card card-light">
+                    <h3> Data Service</h3>
+                    <p>Core data operations and storage</p>
+                </div>
+                <div class="card card-light">
+                    <h3> Health Monitor</h3>
+                    <p>Continuous health checking every 5 seconds</p>
+                </div>
+                <div class="card card-light">
+                    <h3> Recovery Manager</h3>
+                    <p>Automated container restart and healing</p>
+                </div>
+                <div class="card card-light">
+                    <h3> Logging Service</h3>
+                    <p>Centralized log aggregation</p>
+                </div>
+                <div class="card card-light">
+                    <h3> Notification Service</h3>
+                    <p>Multi-channel alert delivery</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section section-dark">
+        <div class="container" style="text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">Ready to Make Your Services Unbreakable?</h2>
+            <p style="font-size: 1.2rem; opacity: 0.8; margin-bottom: 2rem;">
+                Experience the power of autonomous self-healing infrastructure
+            </p>
+            <a href="dashboard.html" class="btn-primary" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                Launch Live Dashboard
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 Autonomous Self-Healing System. Built with Spring Boot, Docker & Resilience.</p>
+    </footer>
+</body>
+
+</html>

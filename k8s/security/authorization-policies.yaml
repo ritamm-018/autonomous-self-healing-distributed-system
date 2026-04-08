@@ -1,0 +1,68 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: self-healing-prod
+spec:
+  {} # Implicit deny-all traffic unless explicitly allowed
+---
+# Allow Ingress Gateway to access Gateway Service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-gateway
+  namespace: self-healing-prod
+spec:
+  selector:
+    matchLabels:
+      app: gateway-service
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+---
+# Allow Gateway Service to access Auth Service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-auth
+  namespace: self-healing-prod
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/self-healing-prod/sa/gateway-service"]
+---
+# Allow Gateway to access Data Service (if applicable) or Auth to Data
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-auth-to-data
+  namespace: self-healing-prod
+spec:
+  selector:
+    matchLabels:
+      app: data-service
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/self-healing-prod/sa/auth-service"]
+---
+# Allow Prometheus scraping (from monitoring namespace)
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: self-healing-prod
+spec:
+  rules:
+  - from:
+    - source:
+        namespaces: ["self-healing-monitoring"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/metrics", "/actuator/prometheus"]

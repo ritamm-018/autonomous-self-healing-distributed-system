@@ -1,0 +1,17 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: self-healing-prod
+spec:
+  mtls:
+    mode: STRICT  # Rejects all plaintext traffic
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: self-healing-monitoring
+spec:
+  mtls:
+    mode: PERMISSIVE # Allow Prometheus to scrape without sidecar if needed

@@ -1,0 +1,12 @@
+server:
+  port: 8082 # DATA SERVICE LISTENS HERE
+
+spring:
+  application:
+    name: data-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

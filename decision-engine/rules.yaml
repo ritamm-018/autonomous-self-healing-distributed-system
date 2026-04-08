@@ -1,0 +1,298 @@
+---
+# Decision Rules Configuration
+
+rules:
+  # Critical: High anomaly score with unhealthy service
+  - id: high-anomaly-restart
+    name: "High Anomaly Score - Restart Pod"
+    priority: 100
+    conditions:
+      - field: anomaly_score
+        operator: ">"
+        value: 0.8
+      - field: service_health
+        operator: "=="
+        value: "unhealthy"
+      - field: restart_count_last_hour
+        operator: "<"
+        value: 3
+    actions:
+      - type: restart_pod
+        params:
+          grace_period: 30
+      - type: notify
+        params:
+          severity: critical
+          channel: slack
+          message: "High anomaly score detected, restarting pod"
+    cooldown: 300  # 5 minutes
+    exclusive: true
+  
+  # Critical: Memory leak detected
+  - id: memory-leak-scale-up
+    name: "Memory Leak - Scale Up"
+    priority: 95
+    conditions:
+      - field: memory_growth_rate
+        operator: ">"
+        value: 1048576  # 1MB/s
+      - field: duration_minutes
+        operator: ">"
+        value: 15
+      - field: current_replicas
+        operator: "<"
+        value: 10
+    actions:
+      - type: scale_up
+        params:
+          increment: 2
+      - type: alert
+        params:
+          severity: warning
+          message: "Memory leak detected, scaling up"
+    cooldown: 600  # 10 minutes
+  
+  # Critical: High latency with errors
+  - id: high-latency-circuit-break
+    name: "High Latency - Enable Circuit Breaker"
+    priority: 90
+    conditions:
+      - field: p95_latency
+        operator: ">"
+        value: 1000  # 1s
+      - field: error_rate
+        operator: ">"
+        value: 0.1  # 10%
+      - field: request_rate
+        operator: ">"
+        value: 100
+    actions:
+      - type: enable_circuit_breaker
+        params:
+          timeout: 60
+      - type: scale_up
+        params:
+          increment: 3
+      - type: notify
+        params:
+          severity: critical
+          message: "High latency and errors, enabling circuit breaker"
+    cooldown: 300
+  
+  # High: Service down
+  - id: service-down-restart
+    name: "Service Down - Immediate Restart"
+    priority: 85
+    conditions:
+      - field: service_status
+        operator: "=="
+        value: "down"
+      - field: consecutive_failures
+        operator: ">"
+        value: 3
+    actions:
+      - type: restart_pod
+        params:
+          grace_period: 10
+      - type: notify
+        params:
+          severity: critical
+          message: "Service down, restarting immediately"
+    cooldown: 120
+    exclusive: true
+  
+  # High: Error rate spike
+  - id: error-spike-rollback
+    name: "Error Spike - Rollback Deployment"
+    priority: 80
+    conditions:
+      - field: error_rate
+        operator: ">"
+        value: 0.2  # 20%
+      - field: error_rate_increase
+        operator: ">"
+        value: 0.15  # 15% increase
+      - field: deployment_age_minutes
+        operator: "<"
+        value: 30
+    actions:
+      - type: rollback
+        params:
+          target: previous
+      - type: notify
+        params:
+          severity: critical
+          message: "High error rate after deployment, rolling back"
+    cooldown: 1800  # 30 minutes
+    exclusive: true
+  
+  # Medium: High CPU usage
+  - id: high-cpu-scale-up
+    name: "High CPU - Scale Up"
+    priority: 70
+    conditions:
+      - field: cpu_usage
+        operator: ">"
+        value: 0.85  # 85%
+      - field: duration_minutes
+        operator: ">"
+        value: 5
+      - field: current_replicas
+        operator: "<"
+        value: 20
+    actions:
+      - type: scale_up
+        params:
+          increment: 2
+    cooldown: 300
+  
+  # Medium: High request rate
+  - id: high-traffic-scale-up
+    name: "High Traffic - Scale Up"
+    priority: 65
+    conditions:
+      - field: request_rate
+        operator: ">"
+        value: 5000
+      - field: current_replicas
+        operator: "<"
+        value: 30
+    actions:
+      - type: scale_up
+        params:
+          increment: 3
+    cooldown: 180
+  
+  # Medium: Anomaly warning
+  - id: anomaly-warning-scale
+    name: "Anomaly Warning - Proactive Scale"
+    priority: 60
+    conditions:
+      - field: anomaly_score
+        operator: ">"
+        value: 0.6
+      - field: anomaly_score
+        operator: "<="
+        value: 0.8
+      - field: current_replicas
+        operator: "<"
+        value: 15
+    actions:
+      - type: scale_up
+        params:
+          increment: 1
+      - type: notify
+        params:
+          severity: warning
+          message: "Anomaly warning, proactively scaling"
+    cooldown: 300
+  
+  # Low: Predicted load increase
+  - id: predicted-load-scale
+    name: "Predicted Load - Proactive Scale"
+    priority: 50
+    conditions:
+      - field: predicted_load_increase
+        operator: ">"
+        value: 0.5  # 50% increase predicted
+      - field: prediction_confidence
+        operator: ">"
+        value: 0.7
+      - field: current_replicas
+        operator: "<"
+        value: 25
+    actions:
+      - type: scale_up
+        params:
+          increment: 2
+    cooldown: 600
+  
+  # Low: Slow response time
+  - id: slow-response-investigate
+    name: "Slow Response - Investigate"
+    priority: 40
+    conditions:
+      - field: p95_latency
+        operator: ">"
+        value: 500  # 500ms
+      - field: p95_latency
+        operator: "<="
+        value: 1000
+    actions:
+      - type: collect_diagnostics
+        params:
+          include: ["heap_dump", "thread_dump", "metrics"]
+      - type: alert
+        params:
+          severity: info
+          message: "Slow response detected, collecting diagnostics"
+    cooldown: 900
+  
+  # Scheduled: Business hours scale-up
+  - id: business-hours-scale
+    name: "Business Hours - Baseline Scale"
+    priority: 30
+    conditions:
+      - field: hour_of_day
+        operator: ">="
+        value: 9
+      - field: hour_of_day
+        operator: "<"
+        value: 18
+      - field: day_of_week
+        operator: in
+        value: [1, 2, 3, 4, 5]  # Monday-Friday
+      - field: current_replicas
+        operator: "<"
+        value: 5
+    actions:
+      - type: scale_to
+        params:
+          replicas: 5
+    cooldown: 3600  # 1 hour
+  
+  # Cleanup: Scale down during low traffic
+  - id: low-traffic-scale-down
+    name: "Low Traffic - Scale Down"
+    priority: 20
+    conditions:
+      - field: request_rate
+        operator: "<"
+        value: 100
+      - field: duration_minutes
+        operator: ">"
+        value: 15
+      - field: current_replicas
+        operator: ">"
+        value: 3
+    actions:
+      - type: scale_down
+        params:
+          decrement: 1
+    cooldown: 600
+  
+  # Recovery: Disable circuit breaker after recovery
+  - id: recovery-disable-circuit-breaker
+    name: "Recovery - Disable Circuit Breaker"
+    priority: 10
+    conditions:
+      - field: circuit_breaker_enabled
+        operator: "=="
+        value: true
+      - field: error_rate
+        operator: "<"
+        value: 0.01  # 1%
+      - field: p95_latency
+        operator: "<"
+        value: 300
+      - field: duration_minutes
+        operator: ">"
+        value: 10
+    actions:
+      - type: disable_circuit_breaker
+        params: {}
+      - type: notify
+        params:
+          severity: info
+          message: "Service recovered, disabling circuit breaker"
+    cooldown: 300

@@ -1,0 +1,123 @@
+---
+# Predictive Scaler Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: predictive-scaler
+  namespace: self-healing-prod
+  labels:
+    app: predictive-scaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: predictive-scaler
+  template:
+    metadata:
+      labels:
+        app: predictive-scaler
+    spec:
+      serviceAccountName: predictive-scaler
+      containers:
+      - name: scaler
+        image: predictive-scaler:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PROMETHEUS_URL
+          value: "http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090"
+        - name: ANOMALY_DETECTOR_URL
+          value: "http://anomaly-detector-service:8090"
+        - name: NAMESPACE
+          value: "self-healing-prod"
+        - name: SCALING_INTERVAL_SECONDS
+          value: "300"
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+
+---
+# ServiceAccount for predictive scaler
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: predictive-scaler
+  namespace: self-healing-prod
+
+---
+# ClusterRole for scaling permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: predictive-scaler-role
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments", "deployments/scale"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: predictive-scaler-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: predictive-scaler-role
+subjects:
+- kind: ServiceAccount
+  name: predictive-scaler
+  namespace: self-healing-prod
+
+---
+# CronJob for periodic scaling (backup to deployment)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: predictive-scaler-cron
+  namespace: self-healing-prod
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: predictive-scaler
+          restartPolicy: OnFailure
+          containers:
+          - name: scaler
+            image: predictive-scaler:latest
+            env:
+            - name: PROMETHEUS_URL
+              value: "http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090"
+            - name: ANOMALY_DETECTOR_URL
+              value: "http://anomaly-detector-service:8090"
+            - name: NAMESPACE
+              value: "self-healing-prod"
+            command:
+            - python
+            - -c
+            - |
+              from predictive_scaler import PredictiveScaler
+              scaler = PredictiveScaler()
+              scaler.run_scaling_cycle()

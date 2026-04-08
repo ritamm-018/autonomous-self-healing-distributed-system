@@ -1,0 +1,12 @@
+server:
+  port: 8084 # RECOVERY MANAGER LISTENS HERE
+
+spring:
+  application:
+    name: recovery-manager
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

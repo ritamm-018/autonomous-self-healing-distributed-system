@@ -1,0 +1,214 @@
+---
+# Recovery Manager ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: recovery-manager-sa
+  namespace: self-healing-prod
+
+---
+# Recovery Manager Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: recovery-manager-role
+  namespace: self-healing-prod
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "patch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+
+---
+# Recovery Manager RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: recovery-manager-rolebinding
+  namespace: self-healing-prod
+subjects:
+- kind: ServiceAccount
+  name: recovery-manager-sa
+  namespace: self-healing-prod
+roleRef:
+  kind: Role
+  name: recovery-manager-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Recovery Manager Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recovery-manager
+  namespace: self-healing-prod
+  labels:
+    app: recovery-manager
+    version: v1
+spec:
+  replicas: 2  # Active-standby pattern
+  selector:
+    matchLabels:
+      app: recovery-manager
+      version: v1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: recovery-manager
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8084"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: recovery-manager-sa  # Use custom SA with RBAC
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: recovery-manager
+        image: recovery-manager:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8084
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: JAVA_OPTS
+          value: "-Xms192m -Xmx512m -XX:+UseG1GC"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: RECOVERY_MODE
+          value: "kubernetes"  # Use K8s API instead of Docker
+        resources:
+          requests:
+            cpu: 300m
+            memory: 384Mi
+          limits:
+            cpu: 600m
+            memory: 768Mi
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8084
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8084
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8084
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          failureThreshold: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - recovery-manager
+              topologyKey: kubernetes.io/hostname
+
+---
+# Recovery Manager Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: recovery-manager-service
+  namespace: self-healing-prod
+  labels:
+    app: recovery-manager
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8084
+    targetPort: 8084
+    protocol: TCP
+    name: http
+  selector:
+    app: recovery-manager
+
+---
+# Recovery Manager HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: recovery-manager-hpa
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: recovery-manager
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 120
+      selectPolicy: Min
+
+---
+# Recovery Manager PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: recovery-manager-pdb
+  namespace: self-healing-prod
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: recovery-manager

@@ -1,0 +1,303 @@
+---
+# Prometheus Recording Rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: self-healing-monitoring
+  labels:
+    app: prometheus
+data:
+  recording-rules.yml: |
+    groups:
+    - name: slo_rules
+      interval: 30s
+      rules:
+      # Request success rate (SLO: 99.9%)
+      - record: slo:request_success_rate:5m
+        expr: |
+          sum(rate(http_requests_total{status!~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+      
+      # Overall success rate
+      - record: slo:request_success_rate_total:5m
+        expr: |
+          sum(rate(http_requests_total{status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m]))
+      
+      # Latency percentiles
+      - record: slo:latency_p50:5m
+        expr: |
+          histogram_quantile(0.50,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+          )
+      
+      - record: slo:latency_p95:5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+          )
+      
+      - record: slo:latency_p99:5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+          )
+      
+      # Error rate
+      - record: slo:error_rate:5m
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+      
+      # Error budget (0.1% allowed for 99.9% SLO)
+      - record: slo:error_budget_remaining:30d
+        expr: |
+          0.001 - (
+            sum(rate(http_requests_total{status=~"5.."}[30d]))
+            /
+            sum(rate(http_requests_total[30d]))
+          )
+    
+    - name: performance_rules
+      interval: 30s
+      rules:
+      # Request rate per service
+      - record: service:request_rate:5m
+        expr: |
+          sum(rate(http_requests_total[5m])) by (service)
+      
+      # CPU usage per service
+      - record: service:cpu_usage:5m
+        expr: |
+          sum(rate(process_cpu_seconds_total[5m])) by (service)
+      
+      # Memory usage per service
+      - record: service:memory_usage_bytes:5m
+        expr: |
+          sum(jvm_memory_used_bytes{area="heap"}) by (service)
+      
+      # GC time per service
+      - record: service:gc_time:5m
+        expr: |
+          sum(rate(jvm_gc_pause_seconds_sum[5m])) by (service)
+      
+      # Active connections
+      - record: service:active_connections:5m
+        expr: |
+          sum(http_server_active_connections) by (service)
+    
+    - name: anomaly_rules
+      interval: 15s
+      rules:
+      # Anomaly score aggregations
+      - record: anomaly:score_max:5m
+        expr: |
+          max(anomaly_score) by (service)
+      
+      - record: anomaly:score_avg:5m
+        expr: |
+          avg(anomaly_score) by (service)
+      
+      # Critical anomalies count
+      - record: anomaly:critical_count:5m
+        expr: |
+          count(anomaly_score > 0.6) by (service)
+      
+      # Prediction rate
+      - record: anomaly:prediction_rate:5m
+        expr: |
+          sum(rate(anomaly_predictions_total[5m])) by (service, severity)
+
+---
+# Prometheus Alert Rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: self-healing-monitoring
+  labels:
+    app: prometheus
+data:
+  alert-rules.yml: |
+    groups:
+    - name: service_alerts
+      rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          slo:error_rate:5m > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High error rate on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has error rate {{ $value | humanizePercentage }} (threshold: 5%)"
+          runbook: "https://runbooks.example.com/high-error-rate"
+      
+      # SLO violation
+      - alert: SLOViolation
+        expr: |
+          slo:request_success_rate:5m < 0.999
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "SLO violation on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} success rate {{ $value | humanizePercentage }} is below 99.9% SLO"
+      
+      # High latency
+      - alert: HighLatency
+        expr: |
+          slo:latency_p99:5m > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High latency on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} P99 latency is {{ $value }}s (threshold: 1s)"
+      
+      # Service down
+      - alert: ServiceDown
+        expr: |
+          up{job=~".*-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 2 minutes"
+      
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: |
+          service:cpu_usage:5m > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} CPU usage is {{ $value | humanizePercentage }}"
+      
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} memory usage is {{ $value | humanizePercentage }}"
+      
+      # Pod restarts
+      - alert: PodRestarting
+        expr: |
+          rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pod {{ $labels.pod }} is restarting"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting frequently"
+    
+    - name: anomaly_alerts
+      rules:
+      # High anomaly score
+      - alert: HighAnomalyScore
+        expr: |
+          anomaly_score > 0.8
+        for: 2m
+        labels:
+          severity: emergency
+          team: platform
+        annotations:
+          summary: "High anomaly score on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has anomaly score {{ $value }} (emergency threshold: 0.8)"
+          action: "Automated recovery triggered"
+      
+      # Critical anomaly score
+      - alert: CriticalAnomalyScore
+        expr: |
+          anomaly_score > 0.6 and anomaly_score <= 0.8
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Critical anomaly detected on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has anomaly score {{ $value }} (critical threshold: 0.6)"
+          action: "Prepare for recovery"
+      
+      # Warning anomaly score
+      - alert: WarningAnomalyScore
+        expr: |
+          anomaly_score > 0.3 and anomaly_score <= 0.6
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Anomaly warning on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has anomaly score {{ $value }} (warning threshold: 0.3)"
+          action: "Monitor closely"
+      
+      # Memory leak detected
+      - alert: MemoryLeakDetected
+        expr: |
+          deriv(jvm_memory_used_bytes{area="heap"}[15m]) > 1048576
+        for: 15m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Memory leak detected on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} memory is growing at {{ $value | humanize }}B/s"
+    
+    - name: infrastructure_alerts
+      rules:
+      # Node disk pressure
+      - alert: NodeDiskPressure
+        expr: |
+          kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Node {{ $labels.node }} has disk pressure"
+          description: "Node {{ $labels.node }} is experiencing disk pressure"
+      
+      # Node memory pressure
+      - alert: NodeMemoryPressure
+        expr: |
+          kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Node {{ $labels.node }} has memory pressure"
+          description: "Node {{ $labels.node }} is experiencing memory pressure"
+      
+      # Persistent volume filling up
+      - alert: PersistentVolumeFillingUp
+        expr: |
+          kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "PV {{ $labels.persistentvolumeclaim }} is filling up"
+          description: "PV {{ $labels.persistentvolumeclaim }} has less than 10% space remaining"

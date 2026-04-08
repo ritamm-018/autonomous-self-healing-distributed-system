@@ -1,0 +1,172 @@
+---
+# Health Monitor Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-monitor
+  namespace: self-healing-prod
+  labels:
+    app: health-monitor
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: health-monitor
+      version: v1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: health-monitor
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8083"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: default
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: health-monitor
+        image: health-monitor:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8083
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: JAVA_OPTS
+          value: "-Xms128m -Xmx384m -XX:+UseG1GC"
+        - name: MONITOR_TARGET_URLS
+          value: "http://gateway-service:8080/actuator/health,http://auth-service:8081/actuator/health,http://data-service:8082/actuator/health"
+        - name: MONITOR_RECOVERY_URL
+          value: "http://recovery-manager-service:8084/recover"
+        - name: MONITOR_INTERVAL_SECONDS
+          value: "5"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 400m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8083
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8083
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          failureThreshold: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - health-monitor
+              topologyKey: kubernetes.io/hostname
+
+---
+# Health Monitor Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: health-monitor-service
+  namespace: self-healing-prod
+  labels:
+    app: health-monitor
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8083
+    targetPort: 8083
+    protocol: TCP
+    name: http
+  selector:
+    app: health-monitor
+
+---
+# Health Monitor HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: health-monitor-hpa
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: health-monitor
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 30
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 120
+      selectPolicy: Min
+
+---
+# Health Monitor PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: health-monitor-pdb
+  namespace: self-healing-prod
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: health-monitor

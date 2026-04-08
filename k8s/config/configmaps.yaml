@@ -1,0 +1,49 @@
+---
+# Application ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: self-healing-prod
+data:
+  # Logging configuration
+  logging.level.root: "INFO"
+  logging.level.com.selfhealing: "DEBUG"
+  
+  # Monitoring intervals
+  monitor.interval.seconds: "5"
+  monitor.timeout.seconds: "3"
+  
+  # Feature flags
+  feature.autoscaling.enabled: "true"
+  feature.distributed-tracing.enabled: "true"
+
+---
+# Notification ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-config
+  namespace: self-healing-prod
+data:
+  smtp-host: "smtp.gmail.com"
+  smtp-port: "587"
+  notification-channels: "email,slack,webhook"
+  alert-severity-threshold: "WARNING"
+
+---
+# Health Monitor ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: health-monitor-config
+  namespace: self-healing-prod
+data:
+  target-urls: |
+    http://gateway-service:8080/actuator/health
+    http://auth-service:8081/actuator/health
+    http://data-service:8082/actuator/health
+  recovery-url: "http://recovery-manager-service:8084/recover"
+  check-interval: "5"
+  timeout: "3"
+  retry-attempts: "3"

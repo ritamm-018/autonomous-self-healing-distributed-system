@@ -1,0 +1,30 @@
+server:
+  port: 8080  # The Gateway always sits at the front, usually port 8080 or 80.
+
+spring:
+  application:
+    name: gateway-service
+  
+  # TEACHER NOTE: Here we define the "Map" for our Doorman.
+  # If a user asks for /auth/login, the Gateway sends them to localhost:8081
+  # If a user asks for /data/items, the Gateway sends them to localhost:8082
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/auth/**
+            
+        - id: data-service
+          uri: http://data-service:8082
+          predicates:
+            - Path=/data/**
+
+# TEACHER NOTE: This exposes the /actuator/health endpoint
+# so our 'Health Monitor' can check on the Gateway itself.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

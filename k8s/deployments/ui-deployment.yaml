@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cyber-command-center
+  namespace: self-healing-prod
+  labels:
+    app: cyber-command-center
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cyber-command-center
+  template:
+    metadata:
+      labels:
+        app: cyber-command-center
+    spec:
+      containers:
+      - name: ui
+        image: cyber-command-center:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cyber-command-center
+  namespace: self-healing-prod
+spec:
+  selector:
+    app: cyber-command-center
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer 

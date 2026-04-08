@@ -1,0 +1,132 @@
+---
+# PeerAuthentication - Enable mTLS for all services
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls
+  namespace: self-healing-prod
+spec:
+  mtls:
+    mode: STRICT  # Enforce mutual TLS for all service-to-service communication
+
+---
+# AuthorizationPolicy - Default deny all
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: self-healing-prod
+spec:
+  {}  # Empty spec = deny all
+
+---
+# AuthorizationPolicy - Allow Gateway to receive external traffic
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-ingress
+  namespace: self-healing-prod
+spec:
+  selector:
+    matchLabels:
+      app: gateway-service
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces: ["istio-system"]  # Allow from Istio ingress gateway
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+
+---
+# AuthorizationPolicy - Allow Gateway to call Auth Service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-auth
+  namespace: self-healing-prod
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/self-healing-prod/sa/default"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+
+---
+# AuthorizationPolicy - Allow Gateway to call Data Service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-data
+  namespace: self-healing-prod
+spec:
+  selector:
+    matchLabels:
+      app: data-service
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/self-healing-prod/sa/default"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE"]
+
+---
+# AuthorizationPolicy - Allow Health Monitor to call all services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-health-monitor
+  namespace: self-healing-prod
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/self-healing-prod/sa/default"]
+    to:
+    - operation:
+        paths: ["/actuator/health*"]
+        methods: ["GET"]
+
+---
+# AuthorizationPolicy - Allow Recovery Manager to call all services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-recovery-manager
+  namespace: self-healing-prod
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/self-healing-prod/sa/recovery-manager-sa"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+
+---
+# RequestAuthentication - JWT validation (optional)
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: self-healing-prod
+spec:
+  selector:
+    matchLabels:
+      app: gateway-service
+  jwtRules:
+  - issuer: "https://selfhealing.example.com"
+    jwksUri: "https://selfhealing.example.com/.well-known/jwks.json"
+    audiences:
+    - "selfhealing-api"

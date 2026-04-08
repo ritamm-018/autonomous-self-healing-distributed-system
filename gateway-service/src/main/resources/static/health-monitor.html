@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Monitor - Autonomous Self-Healing System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        .page-content {
+            padding-top: 100px;
+            min-height: 100vh;
+            background: var(--gradient-dark);
+        }
+
+        .service-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .service-card.healthy {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .service-card.unhealthy {
+            border-color: var(--accent-red);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .service-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-badge.healthy {
+            background: var(--accent-green);
+            color: #000;
+        }
+
+        .status-badge.unhealthy {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .service-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .health-chart {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"></div>
+            <span>Self-Healing System</span>
+        </a>
+        <ul class="navbar-menu">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="health-monitor.html">Health Monitor</a></li>
+            <li><a href="recovery-manager.html">Recovery Manager</a></li>
+            <li><a href="alerts.html">Alerts</a></li>
+            <li><a href="dashboard.html">Live Dashboard</a></li>
+        </ul>
+        <a href="dashboard.html" class="btn-primary">Get Started</a>
+    </nav>
+
+    <div class="page-content">
+        <div class="container">
+            <!-- Header -->
+            <div class="section-header" style="margin-bottom: 2rem;">
+                <h1 style="font-size: 3rem; margin-bottom: 0.5rem;"> HEALTH MONITOR</h1>
+                <p style="font-size: 1.2rem;">Your 24/7 Automated System Health Guardian</p>
+                <p style="opacity: 0.7;">Proactively detects and diagnoses issues to protect your services from failures
+                    24/7</p>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-value" style="color: var(--accent-green);" id="services-count">7</div>
+                    <div class="metric-label">Services Monitored</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" style="color: var(--accent-blue);">5s</div>
+                    <div class="metric-label">Check Interval</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" style="color: var(--accent-green);" id="healthy-count">7</div>
+                    <div class="metric-label">Healthy Services</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" style="color: var(--accent-red);" id="critical-count">0</div>
+                    <div class="metric-label">Critical Alerts</div>
+                </div>
+            </div>
+
+            <!-- Service Status -->
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>AUTONOMOUS HEALTH MONITORING</h2>
+                <p>Real-Time Pulse Check for Every Service, Every 5 Seconds</p>
+            </div>
+
+            <div class="service-status-grid" id="services-grid">
+                <!-- Services will be loaded here dynamically -->
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-name"> Gateway Service</div>
+                        <div class="status-badge healthy">✓ HEALTHY</div>
+                    </div>
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span>Port:</span>
+                            <span>8080</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Last Check:</span>
+                            <span class="last-check">Just now</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Uptime:</span>
+                            <span>99.9%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-name"> Auth Service</div>
+                        <div class="status-badge healthy">✓ HEALTHY</div>
+                    </div>
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span>Port:</span>
+                            <span>8081</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Last Check:</span>
+                            <span class="last-check">Just now</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Uptime:</span>
+                            <span>99.9%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-name"> Data Service</div>
+                        <div class="status-badge healthy">✓ HEALTHY</div>
+                    </div>
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span>Port:</span>
+                            <span>8082</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Last Check:</span>
+                            <span class="last-check">Just now</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Uptime:</span>
+                            <span>99.9%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-name"> Health Monitor</div>
+                        <div class="status-badge healthy">✓ HEALTHY</div>
+                    </div>
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span>Port:</span>
+                            <span>8083</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Last Check:</span>
+                            <span class="last-check">Just now</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Uptime:</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-name"> Recovery Manager</div>
+                        <div class="status-badge healthy">✓ HEALTHY</div>
+                    </div>
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span>Port:</span>
+                            <span>8084</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Last Check:</span>
+                            <span class="last-check">Just now</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Uptime:</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-name"> Logging Service</div>
+                        <div class="status-badge healthy">✓ HEALTHY</div>
+                    </div>
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span>Port:</span>
+                            <span>8085</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Last Check:</span>
+                            <span class="last-check">Just now</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Uptime:</span>
+                            <span>99.9%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-name"> Notification Service</div>
+                        <div class="status-badge healthy">✓ HEALTHY</div>
+                    </div>
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span>Port:</span>
+                            <span>8086</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Last Check:</span>
+                            <span class="last-check">Just now</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Uptime:</span>
+                            <span>99.9%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="section-header" style="margin-top: 4rem;">
+                <h2>KEY FEATURES</h2>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        
+                    </div>
+                    <h3>Detect Failures Instantly</h3>
+                    <p>Continuously probes your services, identifying issues in real-time before they impact users.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        
+                    </div>
+                    <h3>Automated Diagnostics</h3>
+                    <p>Intelligently pinpoints the root cause and determines the best recovery steps.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        
+                    </div>
+                    <h3>Detailed Reports & Alerts</h3>
+                    <p>Creates a full log of recovery actions and sends instant alerts to your team.</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 3rem; padding: 2rem;">
+                <h3 style="font-size: 1.8rem; margin-bottom: 1rem;">Protect Your Services with Real-Time Health
+                    Monitoring</h3>
+                <a href="dashboard.html" class="btn-primary">View Live Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 Autonomous Self-Healing System. Built with Spring Boot, Docker & Resilience.</p>
+    </footer>
+
+    <script>
+        // Simulate real-time updates
+        setInterval(() => {
+            document.querySelectorAll('.last-check').forEach(el => {
+                el.textContent = 'Just now';
+            });
+        }, 5000);
+    </script>
+</body>
+
+</html>

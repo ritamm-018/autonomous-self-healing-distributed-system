@@ -1,0 +1,80 @@
+services:
+  # 1. GATEWAY SERVICE (The Doorman)
+  gateway-service:
+    build: ./gateway-service
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY=DEBUG
+    networks:
+      - self-healing-net
+
+  # 2. AUTH SERVICE (The Bouncer)
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    networks:
+      - self-healing-net
+
+  # 3. DATA SERVICE (The Victim)
+  data-service:
+    build: ./data-service
+    container_name: data-service
+    ports:
+      - "8082:8082"
+    networks:
+      - self-healing-net
+
+  # 4. HEALTH MONITOR (The Doctor)
+  health-monitor:
+    build: ./health-monitor
+    container_name: health-monitor
+    ports:
+      - "8083:8083"
+    environment:
+      # TEACHER NOTE: 
+      # Inside Docker, we use the internal container names!
+      - MONITOR_TARGET_URLS=http://gateway-service:8080/actuator/health,http://auth-service:8081/actuator/health,http://data-service:8082/actuator/health
+      - MONITOR_RECOVERY_URL=http://recovery-manager:8084/recover
+    networks:
+      - self-healing-net
+
+  # 5. RECOVERY MANAGER (The Healer)
+  recovery-manager:
+    build: ./recovery-manager
+    container_name: recovery-manager
+    ports:
+      - "8084:8084"
+    volumes:
+      # TEACHER NOTE:
+      # This is the MAGIC trick.
+      # We give the container access to the Host's Docker Engine.
+      # This allows the Java app inside one container to restart OTHER containers.
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - self-healing-net
+
+  # 6. LOGGING SERVICE (The Recorder)
+  logging-service:
+    build: ./logging-service
+    container_name: logging-service
+    ports:
+      - "8085:8085"
+    networks:
+      - self-healing-net
+
+  # 7. NOTIFICATION SERVICE (The Messenger)
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8086:8086"
+    networks:
+      - self-healing-net
+
+networks:
+  self-healing-net:
+    driver: bridge

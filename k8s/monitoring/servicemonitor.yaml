@@ -1,0 +1,21 @@
+---
+# ServiceMonitor for Prometheus to scrape metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: self-healing-services
+  namespace: self-healing-prod
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      prometheus: "true"
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 15s
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - self-healing-prod

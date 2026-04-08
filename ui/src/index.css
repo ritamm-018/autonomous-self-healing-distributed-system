@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    background-color: #050510;
+    color: #ffffff;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    /* 3D Canvas takes full screen */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0a0a20;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00f3ff;
+}

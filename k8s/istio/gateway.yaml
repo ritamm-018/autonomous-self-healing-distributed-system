@@ -1,0 +1,33 @@
+---
+# Istio Gateway - Entry point for external traffic
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: self-healing-gateway
+  namespace: self-healing-prod
+spec:
+  selector:
+    istio: ingressgateway  # Use Istio's default ingress gateway
+  servers:
+  # HTTPS Configuration
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: istio-ingressgateway-certs  # Reference to TLS secret
+    hosts:
+    - "selfhealing.example.com"  # Replace with your domain
+    - "*.selfhealing.example.com"
+  
+  # HTTP Configuration (redirect to HTTPS)
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "selfhealing.example.com"
+    - "*.selfhealing.example.com"
+    tls:
+      httpsRedirect: true  # Automatically redirect HTTP to HTTPS

@@ -1,0 +1,31 @@
+---
+# Production Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: self-healing-prod
+  labels:
+    name: self-healing-prod
+    environment: production
+    istio-injection: enabled  # Enable Istio sidecar injection
+
+---
+# Staging Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: self-healing-staging
+  labels:
+    name: self-healing-staging
+    environment: staging
+    istio-injection: enabled
+
+---
+# Monitoring Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: self-healing-monitoring
+  labels:
+    name: self-healing-monitoring
+    environment: monitoring

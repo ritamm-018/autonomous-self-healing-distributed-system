@@ -1,0 +1,357 @@
+---
+# Chaos Mesh Experiments for Self-Healing System
+
+# Pod Failure Experiment - Random pod kills
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-failure-test
+  namespace: chaos-testing
+spec:
+  action: pod-failure
+  mode: one
+  duration: "30s"
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: gateway-service
+  scheduler:
+    cron: "@every 15m"
+
+---
+# Pod Kill Experiment - Immediate termination
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-test
+  namespace: chaos-testing
+spec:
+  action: pod-kill
+  mode: fixed
+  value: "2"
+  duration: "1m"
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: data-service
+  scheduler:
+    cron: "@every 20m"
+
+---
+# Network Delay Experiment - Add latency
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-test
+  namespace: chaos-testing
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: auth-service
+  delay:
+    latency: "100ms"
+    correlation: "25"
+    jitter: "10ms"
+  duration: "5m"
+  scheduler:
+    cron: "@every 30m"
+
+---
+# Network Loss Experiment - Packet loss
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-loss-test
+  namespace: chaos-testing
+spec:
+  action: loss
+  mode: one
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: data-service
+  loss:
+    loss: "10"
+    correlation: "25"
+  duration: "3m"
+  scheduler:
+    cron: "@every 25m"
+
+---
+# Network Partition Experiment - Split brain
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-partition-test
+  namespace: chaos-testing
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: gateway-service
+  direction: to
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - self-healing-prod
+      labelSelectors:
+        app: data-service
+  duration: "2m"
+
+---
+# CPU Stress Experiment
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: cpu-stress-test
+  namespace: chaos-testing
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: auth-service
+  stressors:
+    cpu:
+      workers: 4
+      load: 80
+  duration: "3m"
+  scheduler:
+    cron: "@every 40m"
+
+---
+# Memory Stress Experiment
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: memory-stress-test
+  namespace: chaos-testing
+spec:
+  mode: fixed
+  value: "1"
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: data-service
+  stressors:
+    memory:
+      workers: 4
+      size: "512Mi"
+  duration: "5m"
+  scheduler:
+    cron: "@every 35m"
+
+---
+# IO Stress Experiment
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: io-stress-test
+  namespace: chaos-testing
+spec:
+  action: latency
+  mode: one
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: logging-service
+  volumePath: /var/log
+  path: /var/log/**/*
+  delay: "100ms"
+  percent: 50
+  duration: "4m"
+
+---
+# DNS Chaos Experiment
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-chaos-test
+  namespace: chaos-testing
+spec:
+  action: error
+  mode: all
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: gateway-service
+  patterns:
+    - auth-service.*
+  duration: "2m"
+
+---
+# HTTP Abort Experiment - Simulate service failures
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-abort-test
+  namespace: chaos-testing
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: data-service
+  target: Request
+  port: 8080
+  method: GET
+  path: /api/data
+  abort: true
+  duration: "3m"
+
+---
+# HTTP Delay Experiment - Slow responses
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-delay-test
+  namespace: chaos-testing
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - self-healing-prod
+    labelSelectors:
+      app: auth-service
+  target: Request
+  port: 8080
+  method: POST
+  path: /api/auth/login
+  delay: "2s"
+  duration: "5m"
+
+---
+# Workflow - Combined chaos experiment
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: comprehensive-chaos-test
+  namespace: chaos-testing
+spec:
+  entry: entry
+  templates:
+    - name: entry
+      templateType: Serial
+      deadline: 30m
+      children:
+        - pod-failure-step
+        - network-delay-step
+        - cpu-stress-step
+        - recovery-validation-step
+    
+    - name: pod-failure-step
+      templateType: PodChaos
+      deadline: 5m
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          namespaces:
+            - self-healing-prod
+          labelSelectors:
+            app: gateway-service
+    
+    - name: network-delay-step
+      templateType: NetworkChaos
+      deadline: 5m
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          namespaces:
+            - self-healing-prod
+          labelSelectors:
+            app: data-service
+        delay:
+          latency: "200ms"
+    
+    - name: cpu-stress-step
+      templateType: StressChaos
+      deadline: 5m
+      stressChaos:
+        mode: one
+        selector:
+          namespaces:
+            - self-healing-prod
+          labelSelectors:
+            app: auth-service
+        stressors:
+          cpu:
+            workers: 2
+            load: 90
+    
+    - name: recovery-validation-step
+      templateType: Suspend
+      deadline: 5m
+
+---
+# Schedule - Automated chaos testing
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: daily-chaos-test
+  namespace: chaos-testing
+spec:
+  schedule: "0 2 * * *"  # Run at 2 AM daily
+  type: Workflow
+  workflowSpec:
+    entry: entry
+    templates:
+      - name: entry
+        templateType: Serial
+        children:
+          - pod-chaos
+          - network-chaos
+          - stress-chaos
+      
+      - name: pod-chaos
+        templateType: PodChaos
+        podChaos:
+          action: pod-failure
+          mode: fixed
+          value: "1"
+          selector:
+            namespaces:
+              - self-healing-prod
+          duration: "2m"
+      
+      - name: network-chaos
+        templateType: NetworkChaos
+        networkChaos:
+          action: delay
+          mode: all
+          selector:
+            namespaces:
+              - self-healing-prod
+          delay:
+            latency: "100ms"
+          duration: "3m"
+      
+      - name: stress-chaos
+        templateType: StressChaos
+        stressChaos:
+          mode: one
+          selector:
+            namespaces:
+              - self-healing-prod
+          stressors:
+            cpu:
+              workers: 2
+              load: 75
+          duration: "3m"

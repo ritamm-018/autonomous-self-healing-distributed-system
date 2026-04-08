@@ -1,0 +1,156 @@
+---
+# Gateway Service VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: gateway-virtualservice
+  namespace: self-healing-prod
+spec:
+  hosts:
+  - "selfhealing.example.com"
+  - "gateway-service"
+  gateways:
+  - self-healing-gateway
+  - mesh  # Also apply to internal mesh traffic
+  http:
+  - match:
+    - uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: gateway-service
+        port:
+          number: 8080
+        subset: v1
+      weight: 100
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+
+---
+# Auth Service VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: auth-virtualservice
+  namespace: self-healing-prod
+spec:
+  hosts:
+  - "auth-service"
+  http:
+  - route:
+    - destination:
+        host: auth-service
+        port:
+          number: 8081
+        subset: v1
+    timeout: 10s
+    retries:
+      attempts: 3
+      perTryTimeout: 3s
+      retryOn: 5xx,reset,connect-failure
+
+---
+# Data Service VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: data-virtualservice
+  namespace: self-healing-prod
+spec:
+  hosts:
+  - "data-service"
+  http:
+  - route:
+    - destination:
+        host: data-service
+        port:
+          number: 8082
+        subset: v1
+    timeout: 15s
+    retries:
+      attempts: 3
+      perTryTimeout: 5s
+      retryOn: 5xx,reset,connect-failure
+
+---
+# Health Monitor VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: health-monitor-virtualservice
+  namespace: self-healing-prod
+spec:
+  hosts:
+  - "health-monitor-service"
+  http:
+  - route:
+    - destination:
+        host: health-monitor-service
+        port:
+          number: 8083
+        subset: v1
+    timeout: 10s
+
+---
+# Recovery Manager VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: recovery-manager-virtualservice
+  namespace: self-healing-prod
+spec:
+  hosts:
+  - "recovery-manager-service"
+  http:
+  - route:
+    - destination:
+        host: recovery-manager-service
+        port:
+          number: 8084
+        subset: v1
+    timeout: 30s  # Recovery operations may take longer
+
+---
+# Logging Service VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: logging-virtualservice
+  namespace: self-healing-prod
+spec:
+  hosts:
+  - "logging-service"
+  http:
+  - route:
+    - destination:
+        host: logging-service
+        port:
+          number: 8085
+        subset: v1
+    timeout: 10s
+
+---
+# Notification Service VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: notification-virtualservice
+  namespace: self-healing-prod
+spec:
+  hosts:
+  - "notification-service"
+  http:
+  - route:
+    - destination:
+        host: notification-service
+        port:
+          number: 8086
+        subset: v1
+    timeout: 15s
+    retries:
+      attempts: 2
+      perTryTimeout: 5s
+      retryOn: 5xx

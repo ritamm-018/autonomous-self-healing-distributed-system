@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant Alerts - Autonomous Self-Healing System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        .page-content {
+            padding-top: 100px;
+            min-height: 100vh;
+            background: var(--gradient-dark);
+        }
+
+        .alert-table {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 2rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .severity-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .severity-critical {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .severity-warning {
+            background: var(--accent-orange);
+            color: #000;
+        }
+
+        .severity-info {
+            background: var(--light-blue);
+            color: #fff;
+        }
+
+        .channel-icons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .channel-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"></div>
+            <span>Self-Healing System</span>
+        </a>
+        <ul class="navbar-menu">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="health-monitor.html">Health Monitor</a></li>
+            <li><a href="recovery-manager.html">Recovery Manager</a></li>
+            <li><a href="alerts.html">Alerts</a></li>
+            <li><a href="dashboard.html">Live Dashboard</a></li>
+        </ul>
+        <a href="dashboard.html" class="btn-primary">Get Started</a>
+    </nav>
+
+    <div class="page-content">
+        <div class="container">
+            <!-- Header -->
+            <div class="section-header" style="margin-bottom: 2rem;">
+                <h1 style="font-size: 3rem; margin-bottom: 0.5rem;"> INSTANT ALERTS</h1>
+                <p style="font-size: 1.2rem;">Real-Time Incident Alerting</p>
+                <p style="opacity: 0.7;">Critical failures? Be the first to know. Immediate multi-channel alerts<br>keep
+                    your team informed the instant problems occur.</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value" style="color: var(--accent-orange);">12</div>
+                    <div class="label">Alerts Detected</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value" style="color: var(--light-blue);">2s</div>
+                    <div class="label">Alert Delivery Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"></div>
+                    <div class="value" style="color: var(--accent-green);">3</div>
+                    <div class="label">Delivery Channels</div>
+                </div>
+            </div>
+
+            <!-- Alert Configuration -->
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>AUTONOMOUS INCIDENT ALERTS</h2>
+                <p>Detect Critical Issues and Alert Your Team in Seconds</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                        
+                    </div>
+                    <h3>Instant Notifications</h3>
+                    <p>Notify your team via Slack, Email, SMS the moment a problem occurs—no delays.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        
+                    </div>
+                    <h3>Custom Alert Rules</h3>
+                    <p>Define the specific incidents and severity levels that trigger alerts.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        
+                    </div>
+                    <h3>Escalation Management</h3>
+                    <p>Escalate alerts according to severity, ensuring the right team is always in the know.</p>
+                </div>
+            </div>
+
+            <!-- Incident Alert Log -->
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>INCIDENT ALERT LOG</h2>
+            </div>
+
+            <div class="alert-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Issue</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Alerted</th>
+                            <th>Channels</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Data Service</td>
+                            <td>Service Crash</td>
+                            <td><span class="severity-badge severity-critical">CRITICAL</span></td>
+                            <td><span style="color: var(--accent-green);">✓ RESOLVED</span></td>
+                            <td>42 seconds ago</td>
+                            <td>
+                                <div class="channel-icons">
+                                    <div class="channel-icon" title="Email"></div>
+                                    <div class="channel-icon" title="Slack"></div>
+                                    <div class="channel-icon" title="SMS"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Auth Service</td>
+                            <td>Authentication Failure</td>
+                            <td><span class="severity-badge severity-critical">CRITICAL</span></td>
+                            <td><span style="color: var(--accent-green);">✓ RESOLVED</span></td>
+                            <td>2 hours ago</td>
+                            <td>
+                                <div class="channel-icons">
+                                    <div class="channel-icon" title="Email"></div>
+                                    <div class="channel-icon" title="Slack"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>API Service</td>
+                            <td>Latency Issue</td>
+                            <td><span class="severity-badge severity-warning">WARNING</span></td>
+                            <td><span style="color: var(--accent-green);">✓ RESOLVED</span></td>
+                            <td>3 hours ago</td>
+                            <td>
+                                <div class="channel-icons">
+                                    <div class="channel-icon" title="Email"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Gateway Service</td>
+                            <td>HTTP 500 Error</td>
+                            <td><span class="severity-badge severity-critical">CRITICAL</span></td>
+                            <td><span style="color: var(--accent-green);">✓ RESOLVED</span></td>
+                            <td>5 hours ago</td>
+                            <td>
+                                <div class="channel-icons">
+                                    <div class="channel-icon" title="Email"></div>
+                                    <div class="channel-icon" title="Slack"></div>
+                                    <div class="channel-icon" title="SMS"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Multi-Channel Delivery -->
+            <div class="section-header" style="margin-top: 3rem;">
+                <h2>MULTI-CHANNEL DELIVERY</h2>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h3> Email Alerts</h3>
+                    <p>Detailed incident reports delivered to your inbox with full context and recovery actions.</p>
+                </div>
+                <div class="card">
+                    <h3> Slack Integration</h3>
+                    <p>Real-time notifications in your team's Slack channels for instant collaboration.</p>
+                </div>
+                <div class="card">
+                    <h3> SMS Notifications</h3>
+                    <p>Critical alerts sent via SMS for urgent issues requiring immediate attention.</p>
+                </div>
+                <div class="card">
+                    <h3> Webhook Support</h3>
+                    <p>Custom webhook integration for PagerDuty, OpsGenie, and other incident management tools.</p>
+                </div>
+                <div class="card">
+                    <h3> Dashboard Alerts</h3>
+                    <p>Visual alerts displayed in the live dashboard for real-time monitoring.</p>
+                </div>
+                <div class="card">
+                    <h3> Custom Integrations</h3>
+                    <p>Integrate with your existing tools via REST API for maximum flexibility.</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 3rem; padding: 2rem;">
+                <h3 style="font-size: 1.8rem; margin-bottom: 1rem;">Ensure Your Team is Always in the Know</h3>
+                <a href="dashboard.html" class="btn-primary">View Live Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 Autonomous Self-Healing System. Built with Spring Boot, Docker & Resilience.</p>
+    </footer>
+</body>
+
+</html>

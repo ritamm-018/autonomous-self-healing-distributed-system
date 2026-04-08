@@ -1,0 +1,222 @@
+---
+# KEDA ScaledObjects for Event-Driven Autoscaling
+
+# Gateway Service - Multi-metric scaling
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: gateway-service-scaler
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    name: gateway-service
+  minReplicaCount: 3
+  maxReplicaCount: 50
+  pollingInterval: 15
+  cooldownPeriod: 60
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 60
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+          selectPolicy: Max
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+          selectPolicy: Min
+  triggers:
+  # Request rate trigger
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: http_requests_per_second
+      query: |
+        sum(rate(http_requests_total{app="gateway-service"}[1m]))
+      threshold: '1000'
+      activationThreshold: '100'
+  
+  # Anomaly score trigger (proactive scaling)
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: anomaly_score
+      query: |
+        max(anomaly_score{service="gateway-service"})
+      threshold: '0.6'
+      activationThreshold: '0.3'
+  
+  # CPU utilization trigger
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      value: '70'
+
+---
+# Auth Service Scaler
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: auth-service-scaler
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    name: auth-service
+  minReplicaCount: 2
+  maxReplicaCount: 30
+  pollingInterval: 15
+  cooldownPeriod: 60
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: auth_requests_per_second
+      query: |
+        sum(rate(http_requests_total{app="auth-service"}[1m]))
+      threshold: '500'
+  
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: auth_error_rate
+      query: |
+        sum(rate(http_requests_total{app="auth-service",status=~"5.."}[1m]))
+        / sum(rate(http_requests_total{app="auth-service"}[1m]))
+      threshold: '0.05'
+
+---
+# Data Service Scaler
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: data-service-scaler
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    name: data-service
+  minReplicaCount: 3
+  maxReplicaCount: 40
+  pollingInterval: 15
+  cooldownPeriod: 60
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: data_requests_per_second
+      query: |
+        sum(rate(http_requests_total{app="data-service"}[1m]))
+      threshold: '800'
+  
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: data_latency_p95
+      query: |
+        histogram_quantile(0.95,
+          sum(rate(http_request_duration_seconds_bucket{app="data-service"}[1m])) by (le)
+        )
+      threshold: '0.5'
+  
+  - type: memory
+    metricType: Utilization
+    metadata:
+      value: '80'
+
+---
+# Recovery Manager Scaler
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: recovery-manager-scaler
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    name: recovery-manager
+  minReplicaCount: 2
+  maxReplicaCount: 10
+  pollingInterval: 15
+  cooldownPeriod: 120
+  triggers:
+  # Scale based on recovery actions
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: recovery_actions_per_minute
+      query: |
+        sum(rate(recovery_actions_total[1m]))
+      threshold: '5'
+  
+  # Scale based on critical anomalies
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: critical_anomalies
+      query: |
+        count(anomaly_score > 0.6)
+      threshold: '3'
+
+---
+# Anomaly Detector Scaler
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: anomaly-detector-scaler
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    name: anomaly-detector
+  minReplicaCount: 2
+  maxReplicaCount: 8
+  pollingInterval: 15
+  cooldownPeriod: 120
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.self-healing-monitoring:9090
+      metricName: prediction_requests_per_second
+      query: |
+        sum(rate(anomaly_predictions_total[1m]))
+      threshold: '50'
+  
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      value: '70'
+
+---
+# Scheduled Scaling for Gateway (business hours)
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: gateway-scheduled-scaler
+  namespace: self-healing-prod
+spec:
+  scaleTargetRef:
+    name: gateway-service
+  minReplicaCount: 3
+  maxReplicaCount: 50
+  triggers:
+  # Scale up during business hours (9 AM - 6 PM IST)
+  - type: cron
+    metadata:
+      timezone: Asia/Kolkata
+      start: 0 9 * * 1-5
+      end: 0 18 * * 1-5
+      desiredReplicas: '10'
+  
+  # Scale down during off-hours
+  - type: cron
+    metadata:
+      timezone: Asia/Kolkata
+      start: 0 18 * * 1-5
+      end: 0 9 * * 1-5
+      desiredReplicas: '3'

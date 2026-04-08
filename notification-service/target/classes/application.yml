@@ -1,0 +1,15 @@
+server:
+  port: 8086 # NOTIFICATION SERVICE LISTENS HERE
+
+spring:
+  application:
+    name: notification-service
+  mail:
+    host: smtp.gmail.com # Placeholder
+    port: 587
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
