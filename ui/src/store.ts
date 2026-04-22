@@ -12,12 +12,14 @@ export interface ServiceNode {
 interface SystemState {
     nodes: ServiceNode[];
     selectedNode: string | null;
+    activeTool: string | null;
     systemHealth: number;
     isAttackMode: boolean;
 
     // Actions
     setNodes: (nodes: ServiceNode[]) => void;
     selectNode: (id: string | null) => void;
+    setActiveTool: (tool: string | null) => void;
     toggleAttackMode: () => void;
     updateNodeStatus: (id: string, status: ServiceNode['status']) => void;
 }
@@ -31,18 +33,22 @@ const INITIAL_NODES: ServiceNode[] = [
     { id: 'anomaly', name: 'Anomaly Detector', status: 'healthy', cpu: 65, memory: 70, position: [0, 0, -3] },
     { id: 'monitor', name: 'Health Monitor', status: 'healthy', cpu: 10, memory: 15, position: [-2, 0, -1.5] },
     { id: 'recovery', name: 'Recovery Manager', status: 'healthy', cpu: 5, memory: 12, position: [2, 0, -1.5] },
+    { id: 'logging', name: 'Logging Service', status: 'healthy', cpu: 20, memory: 45, position: [0, 0, 5] },
 ]
 
 export const useSystemStore = create<SystemState>((set) => ({
     nodes: INITIAL_NODES,
     selectedNode: null,
+    activeTool: null,
     systemHealth: 100,
     isAttackMode: false,
 
     setNodes: (nodes) => set({ nodes }),
     selectNode: (id) => set({ selectedNode: id }),
+    setActiveTool: (tool) => set({ activeTool: tool }),
     toggleAttackMode: () => set((state) => ({ isAttackMode: !state.isAttackMode })),
     updateNodeStatus: (id, status) => set((state) => ({
         nodes: state.nodes.map(n => n.id === id ? { ...n, status } : n)
     }))
 }))
+
